@@ -145,8 +145,8 @@ excelFileName = r"Time_series_inputs_retrofit.xlsx"
 # Defining input values for model sets
 Number_of_days : int = 14 # NEEDS TO BE CHANGED TO 365 * 20
 Number_of_time_steps : int = 24
-numInvestmentStages : int = 2
-numYears : int = 4
+numInvestmentStages : int = 4
+numYears : int = 20
 
 omcCosts, omsCosts = \
     [.015, .015, .02, .02, .015, .015, .015, .015],[.02, .02]
@@ -160,7 +160,7 @@ ehr_inp["Time_steps"] = list(range(1,
 ehr_inp["Investment_stages"] = list(range(1, 
                                           numInvestmentStages + 1))
 # ehr_inp["Energy_system_location"] = ["LocA", "LocB", "LocC", "LocD"]
-ehr_inp["Energy_system_location"] = ["LocA", "LocB"]
+ehr_inp["Energy_system_location"] = ["LocA", "LocB", "LocC", "LocD"]
 ehr_inp["Calendar_years"] = list(range(1, numYears + 1))
 ehr_inp["Calendar_years"] = [ehr_inp["Calendar_years"][i : i + int(numYears/numInvestmentStages)] \
                                 for i in range(0, 

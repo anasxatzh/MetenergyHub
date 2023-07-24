@@ -981,7 +981,6 @@ class EnergyHubRetrofit:
             rule=Storage_balance_rule,
             doc="Energy balance for the storage modules considering incoming and outgoing energy flows",
         )
-
         def Storage_charg_rate_constr_rule(m, stor_tech, l, w, y, d, t):
             return (
                 m.Qin[stor_tech, l, w, y, d, t]
@@ -1049,14 +1048,14 @@ class EnergyHubRetrofit:
             rule=Big_M_constraint_storage,
             doc="Big-M const that forces binary variable 𝑌 to be equal to 1, if the variable 𝑁𝐶𝐴𝑃 gets a non-0 value",
         )
-        # def Network_connection_rule(m, ecx, combs):
-        #     return sum(m.y_net[ecx, combs, w] for w in m.Investment_stages) <= 1
-        # self.m.Network_connection = pe.Constraint(
-        #     self.m.Energy_carriers_exc,
-        #     self.m.CombLocations,
-        #     rule=Network_connection_rule,
-        #     doc="Constraint for the initial connection (occur once during the project horizon)",
-        # )
+        def Network_connection_rule(m, ecx, combs):
+            return sum(m.y_net[ecx, combs, w] for w in m.Investment_stages) <= 1
+        self.m.Network_connection = pe.Constraint(
+            self.m.Energy_carriers_exc,
+            self.m.CombLocations,
+            rule=Network_connection_rule,
+            doc="Constraint for the initial connection (occur once during the project horizon)",
+        )
         def Big_M_constraint_network(m, ecx, combs, y, d, t):
             return m.P_exchange[ecx, combs, y, d, t] <= m.BigM * \
                 sum(m.y_net[ecx, combs, w] for w in m.Investment_stages)
@@ -1074,7 +1073,6 @@ class EnergyHubRetrofit:
                 m.P_exchange[ecx, combs, y, d, t] \
                     + m.Beta.value * \
                         sum(m.y_net[ecx, combs, w] for w in m.Investment_stages)
-
         self.m.Pipe_diameter = pe.Constraint(
             self.m.Energy_carriers_exc,
             self.m.CombLocations,
@@ -1088,7 +1086,6 @@ class EnergyHubRetrofit:
             return m.LC[combs] == m.Gamma.value * m.dm[combs] + \
                 m.Delta.value * \
                     sum(m.y_net[ecx, combs, w]  for w in m.Investment_stages)
-
         self.m.Piping_cost_per_m = pe.Constraint(
             self.m.Energy_carriers_exc,
             self.m.CombLocations, 
@@ -1312,18 +1309,24 @@ class EnergyHubRetrofit:
             doc="Definition of the total cost model objective function",
         )
 
-        # def salRules(m):
-        #     return (m.Salvage_value <= m.Operating_cost)
-        # self.m.salRuleDef = pe.Constraint(
-        #     rule=salRules,
-        #     doc="salRules",
-        # )
-        # def salRules3(m):
-        #     return (m.Salvage_value <= m.Investment_cost)
-        # self.m.salRuleDef3 = pe.Constraint(
-        #     rule=salRules3,
-        #     doc="salRules3",
-        # )
+        def expRule(m):
+            return (m.Export_profit >= m.Maintenance_cost)
+        self.m.expRuleDef = pe.Constraint(
+            rule=expRule,
+            doc="expRule",
+        )
+        def salRules(m):
+            return (m.Salvage_value <= m.Operating_cost)
+        self.m.salRuleDef = pe.Constraint(
+            rule=salRules,
+            doc="salRules",
+        )
+        def salRules3(m):
+            return (m.Salvage_value <= m.Investment_cost)
+        self.m.salRuleDef3 = pe.Constraint(
+            rule=salRules3,
+            doc="salRules3",
+        )
         def salRules(m):
             return (m.Salvage_value <= m.Total_cost)
         self.m.salRuleDef = pe.Constraint(
