@@ -757,7 +757,7 @@ class EnergyHubRetrofit:
         #%% Model constraints
 
         # Energy demand balances
-        def Load_balance_rule(m, ec, combs, l, w, y, d, t):
+        def Load_balance_rule(m, ec, l, w, y, d, t):
             return (m.P_import[ec, l, y, d, t] if ec in m.Energy_carriers_imp else 0) \
                 + sum(
                 m.P_conv[conv_tech, l, w, y, d, t] * \
@@ -776,13 +776,14 @@ class EnergyHubRetrofit:
             ) - sum(
                 m.P_exchange[ec, combs, y, d, t]\
                     * (1 - (m.Network_loses_per_m[ec] * m.Distance_area[combs])
-                       ) - m.P_exchange[ec, combs, y, d, t]
-                    # for combs in m.CombLocations
-                    for ec in m.Energy_carriers_exc
+                       )
+                    for combs in m.CombLocations
+                    if ec in m.Energy_carriers_exc
+                    # for ec in m.Energy_carriers_exc
             )
         self.m.Load_balance = pe.Constraint(
             self.m.Energy_carriers,
-            self.m.CombLocations,
+            # self.m.CombLocations,
             self.m.Energy_system_location,
             self.m.Investment_stages,
             self.m.Calendar_years,
@@ -1048,14 +1049,22 @@ class EnergyHubRetrofit:
             rule=Big_M_constraint_storage,
             doc="Big-M const that forces binary variable 𝑌 to be equal to 1, if the variable 𝑁𝐶𝐴𝑃 gets a non-0 value",
         )
-        def Network_connection_rule(m, ecx, combs):
-            return sum(m.y_net[ecx, combs, w] for w in m.Investment_stages) <= 1
-        self.m.Network_connection = pe.Constraint(
-            self.m.Energy_carriers_exc,
-            self.m.CombLocations,
-            rule=Network_connection_rule,
-            doc="Constraint for the initial connection (occur once during the project horizon)",
-        )
+        # def Network_connection_rule(m, ecx, combs):
+        #     return sum(m.y_net[ecx, combs, w] for w in m.Investment_stages) <= 1
+        # self.m.Network_connection = pe.Constraint(
+        #     self.m.Energy_carriers_exc,
+        #     self.m.CombLocations,
+        #     rule=Network_connection_rule,
+        #     doc="Constraint for the initial connection (occur once during the project horizon)",
+        # )
+        # def extraRuleNet(m, ecx, combs):
+        #     return sum(m.y_net[ecx, combs, w] for w in m.Investment_stages) >= 0
+        # self.m.extraRuleNetDef = pe.Constraint(
+        #     self.m.Energy_carriers_exc,
+        #     self.m.CombLocations,
+        #     rule=extraRuleNet,
+        #     doc="Constraint for the initial connection (occur once during the project horizon)",
+        # )
         def Big_M_constraint_network(m, ecx, combs, y, d, t):
             return m.P_exchange[ecx, combs, y, d, t] <= m.BigM * \
                 sum(m.y_net[ecx, combs, w] for w in m.Investment_stages)
@@ -1112,27 +1121,27 @@ class EnergyHubRetrofit:
             rule=Minimum_part_load_constr_rule1,
             doc="Constraint enforcing a minimum load during the operation of a dispatchable energy technology",
         )
-        def Minimum_part_load_constr_rule2(m, disp, ec, l, w, y, d, t):
-            return (
-                m.P_conv[disp, l, w, y, d, t] * m.Conv_factor[disp, ec]
-                + m.BigM * (1 - m.y_on[disp, d, t])
-                >= m.Minimum_part_load[disp] * m.Conv_cap[disp, l, w]
-            )
-        self.m.Mininum_part_rule_constr2 = pe.Constraint(
-            (
-                (disp, ec, l, w, y, d, t)
-                for disp in self.m.Dispatchable_tech
-                for ec in self.m.Energy_carriers
-                for l in self.m.Energy_system_location
-                for w in self.m.Investment_stages
-                for y in self.m.Calendar_years
-                for d in self.m.Days
-                for t in self.m.Time_steps
-                if self.m.Conv_factor[disp, ec] > 0
-            ),
-            rule=Minimum_part_load_constr_rule2,
-            doc="Constraint enforcing a minimum load during the operation of a dispatchable energy technology",
-        )
+        # def Minimum_part_load_constr_rule2(m, disp, ec, l, w, y, d, t):
+        #     return (
+        #         m.P_conv[disp, l, w, y, d, t] * m.Conv_factor[disp, ec]
+        #         + m.BigM * (1 - m.y_on[disp, d, t])
+        #         >= m.Minimum_part_load[disp] * m.Conv_cap[disp, l, w]
+        #     )
+        # self.m.Mininum_part_rule_constr2 = pe.Constraint(
+        #     (
+        #         (disp, ec, l, w, y, d, t)
+        #         for disp in self.m.Dispatchable_tech
+        #         for ec in self.m.Energy_carriers
+        #         for l in self.m.Energy_system_location
+        #         for w in self.m.Investment_stages
+        #         for y in self.m.Calendar_years
+        #         for d in self.m.Days
+        #         for t in self.m.Time_steps
+        #         if self.m.Conv_factor[disp, ec] > 0
+        #     ),
+        #     rule=Minimum_part_load_constr_rule2,
+        #     doc="Constraint enforcing a minimum load during the operation of a dispatchable energy technology",
+        # )
         def Fixed_cost_constr_rule(m, conv_tech, l, w):
             return m.Conv_cap[conv_tech, l, w] \
                 <= m.BigM * m.y_conv[conv_tech, l, w]
@@ -1170,6 +1179,203 @@ class EnergyHubRetrofit:
             rule=One_retrofit_state_rule,
             doc="Constraint to impose that one retrofit state out of all possible must be selected",
         )
+
+
+        # self.m.Maintenance_cost = pe.Var(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     within=pe.NonNegativeReals,
+        #     doc="Total maint cost for all conv and stor tech installed at loc l in year y",
+        # )
+        # def Maintenance_cost_rule(m, l, y):
+        #     return m.Maintenance_cost[l,y] == sum((
+        #         (
+        #             m.Linear_conv_costs[conv_tech, y] * m.Conv_cap[conv_tech, l, w]\
+        #                 + m.Fixed_conv_costs[conv_tech, y] * m.y_conv[conv_tech, l, w]
+        #         )) * m.Omc_cost[conv_tech]\
+        #             for conv_tech in m.Conversion_tech
+        #             for w in m.Investment_stages
+        #     ) + sum((
+        #         (
+        #             m.Linear_stor_costs[stor_tech, y] * m.Storage_cap[stor_tech, l, w]\
+        #                 + m.Fixed_stor_costs[stor_tech] * m.y_stor[stor_tech, l, w]
+        #         )) * m.Oms_cost[stor_tech]\
+        #         for stor_tech in m.Storage_tech
+        #         for w in m.Investment_stages
+        #     )
+        # self.m.Maintenance_cost_def = pe.Constraint(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     rule=Maintenance_cost_rule,
+        #     doc="Maintenance cost",
+        # )
+
+        # self.m.importCost = pe.Var(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     within=pe.NonNegativeReals,
+        #     doc="Total income due to exported electricity at loc l in year y",
+        # )
+        # def importCostRule(m, l, y):
+        #     return m.importCost[l,y] == sum(
+        #         (m.Import_prices[ec_imp, y] * \
+        #             m.Number_of_days[d] * \
+        #                 m.P_import[ec_imp, l, y, d, t])
+        #         for ec_imp in m.Energy_carriers_imp
+        #         for d in m.Days
+        #         for t in m.Time_steps
+        # )
+        # self.m.importCostRuleDef = pe.Constraint(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     rule=importCostRule,
+        #     doc="importCostRuleDef",
+        # )
+
+        # self.m.Export_profit = pe.Var(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     within=pe.NonNegativeReals,
+        #     doc="Total income due to exported electricity at loc l in year y",
+        # )
+        # def Export_profit_rule(m, l,y):
+        #     return m.Export_profit[l,y] == sum(
+        #         m.Export_prices[ec_exp, y] * \
+        #             m.Number_of_days[d] * \
+        #                 m.P_export[ec_exp, l, y, d, t] # m.z2[ec_exp, ret, d, t]
+        #         for ec_exp in m.Energy_carriers_exp
+        #         # for ret in m.Retrofit_scenarios
+        #         for d in m.Days
+        #         for t in m.Time_steps
+        #     )
+        # self.m.Export_profit_def = pe.Constraint(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     rule=Export_profit_rule,
+        #     doc="Definition of the income due to electricity exports component of the total energy system cost",
+        # )
+
+        # self.m.Salvage_value = pe.Var(
+        #     self.m.Energy_system_location,
+        #     within=pe.NonNegativeReals,
+        #     doc="Salvage value of all conv and storage tech at location l not reaching the end of their lifetime",
+        # )
+        # def Individual_salvage_value_rule(m, l, y):
+        #     return m.Salvage_value[l] == sum((
+        #         (
+        #             m.Linear_conv_costs[conv_tech, y] * m.Conv_cap[conv_tech, l, w]\
+        #                 + m.Fixed_conv_costs[conv_tech, y] * m.y_conv[conv_tech, l, w]
+        #         )) * m.Salvage_conversion[conv_tech, w] \
+        #             for conv_tech in m.Conversion_tech
+        #             for w in m.Investment_stages
+        #     ) + sum((
+        #         (
+        #             m.Linear_stor_costs[stor_tech, y] * m.Storage_cap[stor_tech, l, w]\
+        #                 + m.Fixed_stor_costs[stor_tech] * m.y_stor[stor_tech, l, w]
+        #         )) * m.Salvage_storage[stor_tech, w] \
+        #         for stor_tech in m.Storage_tech
+        #         for w in m.Investment_stages
+        #     )
+        # self.m.Individual_salvage_value_def = pe.Constraint(
+        #     self.m.Energy_system_location,
+        #     self.m.Calendar_years,
+        #     rule=Individual_salvage_value_rule,
+        #     doc="Individual salvage value terms",
+        # )
+
+        # self.m.Investment_cost = pe.Var(
+        #     self.m.Energy_system_location,
+        #     self.m.Investment_stages,
+        #     within=pe.NonNegativeReals,
+        #     doc="Investment cost of all energy technologies in the energy hub",
+        # )
+        # def Investment_cost_rule(m, ecx, combs, l, w, y):
+        #     return m.Investment_cost[l,w] == sum(
+        #         (
+        #             m.Fixed_conv_costs[conv_tech, y] * m.y_conv[conv_tech, l, w]
+        #             + m.Linear_conv_costs[conv_tech, y] * m.Conv_cap[conv_tech, l, w]
+        #         )
+        #         * m.CRF_tech[conv_tech]
+        #         for conv_tech in m.Conversion_tech
+        #     ) + sum(
+        #         (
+        #             m.Fixed_stor_costs[stor_tech] * m.y_stor[stor_tech, l, w]
+        #             + m.Linear_stor_costs[stor_tech, y] * m.Storage_cap[stor_tech, l, w]
+        #         )
+        #         * m.CRF_stor[stor_tech]
+        #         for stor_tech in m.Storage_tech
+        #     ) +  m.y_net[ecx, combs, w] * m.LC[combs] * .5 * m.Distance_area[combs]
+
+        # self.m.Investment_cost_def = pe.Constraint(
+        #     self.m.Energy_carriers_exc,
+        #     self.m.CombLocations,
+        #     self.m.Energy_system_location,
+        #     self.m.Investment_stages,
+        #     self.m.Calendar_years,
+        #     rule=Investment_cost_rule,
+        #     doc="Definition of the investment cost component of the total energy system cost",
+        # )
+
+        # # OPER EXPENDITURE
+        # self.m.Operating_cost = pe.Var(
+        #     within=pe.NonNegativeReals,
+        #     doc="Total cost due to energy carrier imports at loc l in year y",
+        # )
+        # def Operating_cost_rule(m):
+        #     return m.Operating_cost == sum(m.importCost[l,y] + \
+        #         m.Maintenance_cost[l,y] - \
+        #             m.Export_profit[l,y] \
+        #                 * (1/(1+m.Discount_rate)**y)
+        #                 for l in m.Energy_system_location
+        #                 for y in m.Calendar_years)
+        # self.m.Operating_cost_def = pe.Constraint(
+        #     rule=Operating_cost_rule,
+        #     doc="Definition of the operating cost component of the total energy system cost",
+        # )
+
+        # # INV EXPENDITURE
+        # self.m.invest_exp = pe.Var(
+        #     within=pe.NonNegativeReals,
+        #     doc="Total cost due to energy carrier imports at loc l in year y",
+        # )
+        # def invest_exp_rule(m):
+        #     return m.invest_exp == \
+        #         sum(m.Investment_cost[l,w] \
+        #             * (1/(1+m.Discount_rate)**(w-1))
+        #                 for l in m.Energy_system_location
+        #                 for w in m.Investment_stages)
+        # self.m.invest_exp_def = pe.Constraint(
+        #     rule=invest_exp_rule,
+        #     doc="Definition of the operating cost component of the total energy system cost",
+        # )
+
+        # # SALV EXPENDITURE
+        # # INV EXPENDITURE
+        # self.m.salv_exp = pe.Var(
+        #     within=pe.NonNegativeReals,
+        #     doc="Total cost due to energy carrier imports at loc l in year y",
+        # )
+        # def salv_exp_rule(m):
+        #     return m.salv_exp == \
+        #         sum(m.Salvage_value[l] \
+        #             * (1/(1+m.Discount_rate)**(1))
+        #                 for l in m.Energy_system_location)
+        # self.m.salv_exp_def = pe.Constraint(
+        #     rule=salv_exp_rule,
+        #     doc="Definition of the operating cost component of the total energy system cost",
+        # )
+
+        # def Total_cost_rule(m):
+        #     return m.Total_cost == \
+        #         m.invest_exp + \
+        #             m.Operating_cost \
+        #                 - m.salv_exp
+
+        # self.m.Total_cost_def = pe.Constraint(
+        #     rule=Total_cost_rule,
+        #     doc="Definition of the total cost model objective function",
+        # )
+
         def Maintenance_cost_rule(m, l, w):
             return m.Maintenance_cost == sum((
                 (
@@ -1178,7 +1384,6 @@ class EnergyHubRetrofit:
                 )) * m.Omc_cost[conv_tech]\
                     for conv_tech in m.Conversion_tech
                     for y in m.Calendar_years
-                    # for w in m.Investment_stages
             ) + sum((
                 (
                     m.Linear_stor_costs[stor_tech, y] * m.Storage_cap[stor_tech, l, w]\
@@ -1186,7 +1391,6 @@ class EnergyHubRetrofit:
                 )) * m.Oms_cost[stor_tech]\
                 for stor_tech in m.Storage_tech
                 for y in m.Calendar_years
-                # for w in m.Investment_stages
             )
         self.m.Maintenance_cost_def = pe.Constraint(
             self.m.Energy_system_location,
@@ -1245,7 +1449,7 @@ class EnergyHubRetrofit:
             rule=Individual_salvage_value_rule,
             doc="Individual salvage value terms",
         )
-        # Objective function definitions
+
         self.m.importCost = pe.Var(
             within=pe.NonNegativeReals,
             doc="Total income due to exported electricity at loc l in year y",
@@ -1291,7 +1495,6 @@ class EnergyHubRetrofit:
             ) +  m.y_net[ecx, combs, w] * m.LC[combs] * .5 * m.Distance_area[combs]
                 # m.y_net[ecx, combs, w] * m.LC[combs] * .5 * m.Distance_area[combs]
                 # + m.Network_inv_cost_per_m * m.Network_length * m.CRF_network 
-
         self.m.Investment_cost_def = pe.Constraint(
             self.m.Energy_carriers_exc,
             self.m.CombLocations,
@@ -1299,14 +1502,6 @@ class EnergyHubRetrofit:
             self.m.Investment_stages,
             rule=Investment_cost_rule,
             doc="Definition of the investment cost component of the total energy system cost",
-        )
-        def Total_cost_rule(m):
-            return m.Total_cost == m.Investment_cost +\
-                m.Operating_cost\
-                    - m.Salvage_value
-        self.m.Total_cost_def = pe.Constraint(
-            rule=Total_cost_rule,
-            doc="Definition of the total cost model objective function",
         )
 
         def expRule(m):
@@ -1345,6 +1540,16 @@ class EnergyHubRetrofit:
             rule=invRules,
             doc="invRules",
         )
+
+        def Total_cost_rule(m):
+            return m.Total_cost == m.Investment_cost +\
+                m.Operating_cost\
+                    - m.Salvage_value
+        self.m.Total_cost_def = pe.Constraint(
+            rule=Total_cost_rule,
+            doc="Definition of the total cost model objective function",
+        )
+
 
         def Total_carbon_rule(m):
             return m.Total_carbon == sum(
@@ -1662,7 +1867,7 @@ class EnergyHubRetrofit:
             # pkl.dump(all_vars, file)
             # file.close()
 
-            # Excel file with all variable values
+            ## Excel file with all variable values
             # of.write_all_vars_to_excel(all_vars[0], 
             #                            results_folder + "\cost_min_" \
             #                             + str(self.invStage))

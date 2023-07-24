@@ -145,8 +145,8 @@ excelFileName = r"Time_series_inputs_retrofit.xlsx"
 # Defining input values for model sets
 Number_of_days : int = 14 # NEEDS TO BE CHANGED TO 365 * 20
 Number_of_time_steps : int = 24
-numInvestmentStages : int = 4
-numYears : int = 20
+numInvestmentStages : int = 2
+numYears : int = 4
 
 omcCosts, omsCosts = \
     [.015, .015, .02, .02, .015, .015, .015, .015],[.02, .02]
@@ -160,7 +160,7 @@ ehr_inp["Time_steps"] = list(range(1,
 ehr_inp["Investment_stages"] = list(range(1, 
                                           numInvestmentStages + 1))
 # ehr_inp["Energy_system_location"] = ["LocA", "LocB", "LocC", "LocD"]
-ehr_inp["Energy_system_location"] = ["LocA", "LocB", "LocC", "LocD"]
+ehr_inp["Energy_system_location"] = ["LocA", "LocB"]
 ehr_inp["Calendar_years"] = list(range(1, numYears + 1))
 ehr_inp["Calendar_years"] = [ehr_inp["Calendar_years"][i : i + int(numYears/numInvestmentStages)] \
                                 for i in range(0, 
@@ -180,7 +180,7 @@ ehr_inp["Oms_cost"] = {k : v for k,v in zip(ehr_inp["Storage_tech"],
 ehr_inp["Energy_carriers"] = ["Heat", "Elec", "NatGas", "Oil", "Biomass"]
 ehr_inp["Energy_carriers_imp"] = ["Elec", "NatGas", "Oil", "Biomass"]
 ehr_inp["Energy_carriers_exp"] = ["Elec"]
-ehr_inp["Energy_carriers_exc"] = ["Oil"]
+ehr_inp["Energy_carriers_exc"] = ["Oil", "Heat"]
 ehr_inp["Energy_carriers_dem"] = ["Heat", "Elec"]
 # ehr_inp["Retrofit_scenarios"] = ["Noretrofit", "Wall", "Fullretrofit"]
 ehr_inp["Retrofit_scenarios"] = ["Noretrofit"]
@@ -277,7 +277,8 @@ gen_tech = {
 ehr_inp["Linear_conv_costs"] = {key: gen_tech[key][0] for key in gen_tech.keys()}
 ehr_inp["Fixed_conv_costs"] = {key: gen_tech[key][1] for key in gen_tech.keys()}
 ehr_inp["Lifetime_tech"] = {key: gen_tech[key][2] for key in gen_tech.keys()}
-ehr_inp["Network_loses_per_m"] = {"Oil" : .234}
+ehr_inp["Network_loses_per_m"] = {"Oil" : .234,
+                                  "Heat" : .234}
 ehr_inp["Export_prices"] = {"Elec": 0.120}
 
 
