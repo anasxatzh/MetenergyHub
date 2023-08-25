@@ -180,7 +180,7 @@ ehr_inp["Oms_cost"] = {k : v for k,v in zip(ehr_inp["Storage_tech"],
 ehr_inp["Energy_carriers"] = ["Heat", "Elec", "NatGas", "Oil", "Biomass"]
 ehr_inp["Energy_carriers_imp"] = ["Elec", "NatGas", "Oil", "Biomass"]
 ehr_inp["Energy_carriers_exp"] = ["Elec"]
-ehr_inp["Energy_carriers_exc"] = ["Oil", "Heat"]
+ehr_inp["Energy_carriers_exc"] = ["Heat"]
 ehr_inp["Energy_carriers_dem"] = ["Heat", "Elec"]
 # ehr_inp["Retrofit_scenarios"] = ["Noretrofit", "Wall", "Fullretrofit"]
 ehr_inp["Retrofit_scenarios"] = ["Noretrofit"]
@@ -200,9 +200,10 @@ for elem in combs:
 
 ehr_inp["combineLocations"] = combLocs
 ehr_inp["Distance_area"] = {k : v for k,v in zip(ehr_inp["combineLocations"],
-                                                    Distances)}
+                                                 Distances)}
 print("combineLocations", ehr_inp["combineLocations"])
 print("Distance_area", ehr_inp["Distance_area"])
+
 
 
 # Defining input values for model parameters
@@ -219,7 +220,6 @@ ehr_inp["Energy_demand"] = {(k[0], k[2], k[3]):ehr_inp["Energy_demand"][k] \
 
 
 
-
 Number_of_days = pd.read_excel(
     excelFileName,
     index_col=0,
@@ -228,6 +228,7 @@ Number_of_days = pd.read_excel(
 )  # Read from some Excel/.csv file
 ehr_inp["Number_of_days"] = Number_of_days.stack().reorder_levels([1,0]).to_dict()
 ehr_inp["Number_of_days"] = {k[1]:ehr_inp["Number_of_days"][k] for k in ehr_inp["Number_of_days"].keys()}
+
 
 
 C_to_T = pd.read_excel(
@@ -245,8 +246,16 @@ P_solar = pd.read_excel(
     header=[0],
     sheet_name="Solar",
 )  # Read from some Excel/.csv file
+
 ehr_inp["P_solar"] = P_solar.stack().reorder_levels([2,0,1]).to_dict()
-ehr_inp["P_solar"] = {(k[1], k[2]):ehr_inp["P_solar"][k] for k in ehr_inp["P_solar"].keys()}
+
+
+ehr_inp["P_solar"] = {(l,y,k[1], k[2]):ehr_inp["P_solar"][k]
+                      for l in ehr_inp["Energy_system_location"]
+                      for y in sum(ehr_inp["Calendar_years"],[])
+                      for k in ehr_inp["P_solar"].keys()
+                     }
+
 
 
 ehr_inp["Discount_rate"] = 0.050
@@ -277,8 +286,7 @@ gen_tech = {
 ehr_inp["Linear_conv_costs"] = {key: gen_tech[key][0] for key in gen_tech.keys()}
 ehr_inp["Fixed_conv_costs"] = {key: gen_tech[key][1] for key in gen_tech.keys()}
 ehr_inp["Lifetime_tech"] = {key: gen_tech[key][2] for key in gen_tech.keys()}
-ehr_inp["Network_loses_per_m"] = {"Oil" : .234,
-                                  "Heat" : .234}
+ehr_inp["Network_loses_per_m"] = {"Heat" : .234}
 ehr_inp["Export_prices"] = {"Elec": 0.120}
 
 
@@ -320,49 +328,84 @@ ehr_inp["Alpha"], ehr_inp["Beta"], \
 
 
 ehr_inp["Conv_factor"] = {
-    ("PV", "Elec"): 0.15,
+
+    ("PV", "Elec", 1): 0.15,
+    ("PV", "Elec", 2): 0.15,
+    # ("PV", "Elec", 3): 0.15,
+    # ("PV", "Elec", 4): 0.15,
+
     # ("PV", "Heat"   ): 0.15,
     # ("PV", "NatGas" ): 0.15,
     # ("PV", "Oil"    ): 0.15,
     # ("PV", "Biomass"): 0.15,
 
-    ("ST", "Heat"): 0.35,
+    ("ST", "Heat", 1): 0.35,
+    ("ST", "Heat", 2): 0.35,
+    # ("ST", "Heat", 3): 0.35,
+    # ("ST", "Heat", 4): 0.35,
+
     # ("ST", "Elec"): 0.35,
     # ("ST", "NatGas"): 0.35,
     # ("ST", "Oil"): 0.35,
     # ("ST", "Biomass"): 0.35,
 
-    ("ASHP", "Heat"): 3.0,
+
+    ("ASHP", "Heat", 1): 3.0,
+    ("ASHP", "Heat", 2): 3.0,
+    # ("ASHP", "Heat", 3): 3.0,
+    # ("ASHP", "Heat", 4): 3.0,
+
     # ("ASHP", "Elec"   ): 3.0,
     # ("ASHP", "NatGas" ): 3.0,
     # ("ASHP", "Oil"    ): 3.0,
     # ("ASHP", "Biomass"): 3.0,
 
-    ("GSHP", "Heat"): 4.0,
+
+    ("GSHP", "Heat", 1): 4.0,
+    ("GSHP", "Heat", 2): 4.0,
+    # ("GSHP", "Heat", 3): 4.0,
+    # ("GSHP", "Heat", 4): 4.0,
+
     # ("GSHP", "Elec"   ): 4.0,
     # ("GSHP", "NatGas" ): 4.0,
     # ("GSHP", "Oil"    ): 4.0,
     # ("GSHP", "Biomass"): 4.0,
 
-    ("Gas_Boiler", "Heat"): 0.9,
+    ("Gas_Boiler", "Heat", 1): 0.9,
+    ("Gas_Boiler", "Heat", 2): 0.9,
+    # ("Gas_Boiler", "Heat", 3): 0.9,
+    # ("Gas_Boiler", "Heat", 4): 0.9,
+
     # ("Gas_Boiler", "Elec"   ): 0.9,
     # ("Gas_Boiler", "NatGas" ): 0.9,
     # ("Gas_Boiler", "Oil"    ): 0.9,
     # ("Gas_Boiler", "Biomass"): 0.9,
 
-    ("Bio_Boiler", "Heat"): 0.9,
+    ("Bio_Boiler", "Heat", 1): 0.9,
+    ("Bio_Boiler", "Heat", 2): 0.9,
+    # ("Bio_Boiler", "Heat", 3): 0.9,
+    # ("Bio_Boiler", "Heat", 4): 0.9,
+
     # ("Bio_Boiler", "Elec"   ): 0.9,
     # ("Bio_Boiler", "NatGas" ): 0.9,
     # ("Bio_Boiler", "Oil"    ): 0.9,
     # ("Bio_Boiler", "Biomass"): 0.9,
 
-    ("Oil_Boiler", "Heat"): 0.9,
+    ("Oil_Boiler", "Heat", 1): 0.9,
+    ("Oil_Boiler", "Heat", 2): 0.9,
+    # ("Oil_Boiler", "Heat", 3): 0.9,
+    # ("Oil_Boiler", "Heat", 4): 0.9,
+
     # ("Oil_Boiler", "Elec"   ): 0.9,
     # ("Oil_Boiler", "NatGas" ): 0.9,
     # ("Oil_Boiler", "Oil"    ): 0.9,
     # ("Oil_Boiler", "Biomass"): 0.9,
 
-    ("CHP", "Heat"): 0.6,
+    ("CHP", "Heat", 1): 0.6,
+    ("CHP", "Heat", 2): 0.6,
+    # ("CHP", "Heat", 3): 0.6,
+    # ("CHP", "Heat", 4): 0.6,
+
     # ("CHP", "Elec"   ): 0.6,
     # ("CHP", "NatGas" ): 0.6,
     # ("CHP", "Oil"    ): 0.6,
@@ -415,7 +458,13 @@ ehr_inp["Linear_stor_costs"] = {key: stor_tech[key][0] for key in stor_tech.keys
 #         bat)
 #     }
 
-ehr_inp["Fixed_stor_costs"] = {key: stor_tech[key][1] for key in stor_tech.keys()}
+
+ehr_inp["Fixed_stor_costs"] = {(key,w) : (stor_tech[key][1]) for key in stor_tech.keys()
+                               for w in ehr_inp["Investment_stages"]}
+
+
+
+
 ehr_inp["Storage_max_charge"] = {key: stor_tech[key][2] for key in stor_tech.keys()}
 ehr_inp["Storage_max_discharge"] = {key: stor_tech[key][3] for key in stor_tech.keys()}
 ehr_inp["Storage_standing_losses"] = {key: stor_tech[key][4] for key in stor_tech.keys()}
