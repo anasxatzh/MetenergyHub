@@ -6,6 +6,7 @@
 
 import pandas as pd
 from itertools import combinations as cm
+from itertools import permutations as pm
 
 # INITIALIZE INPUT DICT
 ehr_inp = dict()
@@ -189,22 +190,51 @@ ehr_inp["Retrofit_scenarios"] = ["Noretrofit"]
 # DISTANCE BETWEEN LOCATIONS:
 # Dab, Dac, Dad, Dbc, Dbd, Dcd
 # DISTANCES MISSING (AND REPLACED WITH 60 m) : Dac (1->3), Dbd(2->4)
-Distances : list = [90, 60, 80, 150, 60, 105]
+
+distances : list = [90, 60, 80, 150, 60, 105]
+Distances = {
+    k : v for k,v in zip(
+        ["Loc_ab", "Loc_ac", "Loc_ad", 
+         "Loc_bc", "Loc_bd", "Loc_cd"],
+        distances
+    )
+}
+
+print("Distances ", Distances)
+
 combLocs = []
+permLocks = []
 
+perms = list(pm(ehr_inp["Energy_system_location"], 2))
 combs = list(cm(ehr_inp["Energy_system_location"], 2))
-for elem in combs:
-    keep_ = []
-    [keep_.append(i.split("c")[1]) for i in elem]
-    combLocs.append("Loc_" + "".join(keep_).lower())
 
-ehr_inp["combineLocations"] = combLocs
-ehr_inp["Distance_area"] = {k : v for k,v in zip(ehr_inp["combineLocations"],
-                                                 Distances)}
+for elem in perms:
+    keep_, keepP = [], []
+    [keep_.append(i.split("c")[1]) for i in elem]
+    permLocks.append("Loc_" + "".join(keep_).lower())
+
+ehr_inp["combineLocations"] = permLocks
+
+# ehr_inp["Distance_area"] = {k : Distances[v] for k,v in 
+#                             zip(ehr_inp["combineLocations"],
+#                                 Distances)
+#                             }
+
+ehr_inp["Distance_area"] = {}
+for comb in ehr_inp["combineLocations"]:
+    splitComb = comb.split("_")[1]
+    loc1, loc2 = splitComb[0], splitComb[1]
+
+    key1, key2 = f"Loc_{loc1}{loc2}", f"Loc_{loc2}{loc1}"
+
+    if key1 in Distances:
+        ehr_inp["Distance_area"][comb] = Distances[key1]
+    elif key2 in Distances:
+        ehr_inp["Distance_area"][comb] = Distances[key2]
+
+
 print("combineLocations", ehr_inp["combineLocations"])
 print("Distance_area", ehr_inp["Distance_area"])
-
-
 
 # Defining input values for model parameters
 Demands = pd.read_excel(
@@ -216,7 +246,6 @@ Demands = pd.read_excel(
 ehr_inp["Energy_demand"] = Demands.stack().stack().reorder_levels([3, 2, 0, 1]).to_dict()
 ehr_inp["Energy_demand"] = {(k[0], k[2], k[3]):ehr_inp["Energy_demand"][k] \
                             for k in ehr_inp["Energy_demand"].keys()}
-
 
 
 
